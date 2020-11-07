@@ -7,11 +7,10 @@ import os
 import datetime
 downloads  = 0
 passes = 1
-path = "/home/allanburnier/projects/mactorrent_downloader/torrents/"
+path = "/home/allanburnier/projects/mactorrent_downloader/mactorrent_downloader/torrents/"
 dwn_file = "dwn.txt"
 csv_file = "log.csv"
 sleeping_time = 12*3600
-restart = 20
 def check_path(path):
     if path.endswith("/") and os.path.exists(path):
         return True
@@ -57,9 +56,9 @@ def write_csv(dict, filename):
 
 def download(list_of_dict):
     global downloads
-    print("downloading : %s " % len(list_of_dict))
+    print("[+]Starting download of : %s torrents" % len(list_of_dict))
     for i in list_of_dict:
-        print("[+]downloading %s" % i["name"][0:10], end="\r")
+        print("[+]downloading torrent nammed : %s" % i["name"][0:10], end="\r")
         requ = requests.get("http://mactorrent.co/" + str(i["link"]), allow_redirects=True)
         open(dwn_file, "a+").write(str(i["link"]) + "\n")
         open(path + "torrent_" + str(downloads) + ".torrent", "wb").write(requ.content)
@@ -73,24 +72,30 @@ def check_file(file):
         os.system("touch %s" %file)
 check_path(path)
 
+def filecheck(file, limit, keep : int):
+    i = open(file, "r").readlines()
+    if len(i) >= limit:
+        del i[0:len(i)-keep]
+        print("[+]file: %s was too large deleted %s lines." %(file, len(i)-keep))
+        open(file, "w+").writelines(i)
+    else:
+        pass
+
 try:
     while True:
         check_file(csv_file)
         check_file(dwn_file)
+        print("[+]Starting script")
         main = scrapping("http://mactorrent.co/torrents1.php?mode=category&cat=28")
         download(main)
         write_csv(main, csv_file)
-        if passes % restart == 0 and passes !=0:
-            os.remove(csv_file)
-            os.remove(dwn_file)
-            open(csv_file, "w+").close()
-            open(dwn_file, "w+").close()
-        print("[+]finished passes number %s " % passes)
+        filecheck(dwn_file, 1500, 200)
+        print("[+]finished passes number : %s " % passes)
         passes += 1
         print("[+]going to sleep at %s for %s hours" % (datetime.datetime.now(), sleeping_time/3600))
         time.sleep(sleeping_time)
 
 except KeyboardInterrupt:
-    print("[+]detected ctrl+C stopping ...")
+    print("[+] detected ctrl+C stopping ...")
 else:
-    print("[-]something went wrong")
+    print("[-] something went wrong")
